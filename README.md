@@ -28,7 +28,7 @@ data/www/             Web del iPhone (se sube a LittleFS)
   index.html app.css app.js dtc.js pdf.js manifest.webmanifest
   fonts/              Barlow y Barlow Semi Condensed (licencia OFL)
   icons/              Iconos de la app
-  logo-yamaha.png     ← lo pones tú (ver abajo)
+  logo-yamaha.png     Logo de la pantalla de arranque (blanco sobre fondo transparente)
 ```
 
 ## Hardware
@@ -45,8 +45,7 @@ data/www/             Web del iPhone (se sube a LittleFS)
 ## Compilar y subir (desde tu ordenador, con la ESP32 por USB)
 
 1. Instala [PlatformIO](https://platformio.org/install) (extensión de VS Code o `pip install platformio`).
-2. Copia el logo a `data/www/logo-yamaha.png`. Sin él, la pantalla de arranque muestra «NMAX 125».
-3. En la carpeta del proyecto:
+2. En la carpeta del proyecto:
 
 ```bash
 pio run                 # compilar
