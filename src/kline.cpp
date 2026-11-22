@@ -51,7 +51,8 @@ void KLine::esperarP3() {
 }
 
 // Envía un byte y espera su eco (la línea K es semidúplex: recibimos lo que enviamos).
-void KLine::escribirByte(uint8_t b) {
+// Las esperas usan delay(1): ceden la CPU al resto de tareas y los bytes quedan en el búfer de la UART.
+void KLine::escribirByte(uint8_t b, bool pausaP4) {
   Serial2.write(b);
   uint32_t t0 = millis();
   while (!Serial2.available()) {
@@ -59,11 +60,11 @@ void KLine::escribirByte(uint8_t b) {
       if (trazas) Serial.printf("[K] AVISO: sin eco del byte %02X (¿transceptor o 12 V?)\n", b);
       return;
     }
-    delayMicroseconds(100);
+    delay(1);
   }
   uint8_t eco = Serial2.read();
   if (eco != b && trazas) Serial.printf("[K] AVISO: eco distinto, enviado %02X recibido %02X\n", b, eco);
-  delay(T_P4);
+  if (pausaP4) delay(T_P4);
 }
 
 bool KLine::enviar(const uint8_t* datos, uint8_t len) {
@@ -87,7 +88,7 @@ bool KLine::enviar(const uint8_t* datos, uint8_t len) {
 
   vaciarEntrada();
   traza("TX:", buf, n);
-  for (int i = 0; i < n; i++) escribirByte(buf[i]);
+  for (int i = 0; i < n; i++) escribirByte(buf[i], i < n - 1);   // sin P4 tras el último byte
   msUltimoEnvio_ = millis();
   return true;
 }
@@ -130,7 +131,7 @@ bool KLine::recibir(Trama& t, uint32_t esperaPrimerByte) {
         msFinRespuesta_ = millis();
         return false;
       }
-      delayMicroseconds(200);
+      delay(1);
     }
   }
   msFinRespuesta_ = millis();
@@ -240,7 +241,7 @@ static int leerByte(uint32_t espera) {
   uint32_t t0 = millis();
   while (!Serial2.available()) {
     if (millis() - t0 > espera) return -1;
-    delayMicroseconds(200);
+    delay(1);
   }
   return Serial2.read();
 }
@@ -283,7 +284,7 @@ bool KLine::initLenta(uint8_t direccion, uint8_t& kb1, uint8_t& kb2) {
   kb2 = b2;
   Serial.printf("[K] Init lenta: keybytes %02X %02X\n", kb1, kb2);
   delay(30);                  // W4: 25–50 ms
-  escribirByte(~kb2 & 0xFF);
+  escribirByte(~kb2 & 0xFF, false);
   int inv = leerByte(80);
   if (inv < 0 || (uint8_t)inv != (uint8_t)~direccion) {
     Serial.printf("[K] Init lenta: confirmación incorrecta (%d)\n", inv);

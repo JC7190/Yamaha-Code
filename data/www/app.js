@@ -67,8 +67,16 @@ function conectarWs() {
   if (S.ws && (S.ws.readyState === 0 || S.ws.readyState === 1)) return;
   const ws = new WebSocket(`ws://${location.host || "192.168.4.1"}/ws`);
   S.ws = ws;
-  ws.onopen = () => { S.wsAbierto = true; enviarHora(); cargarInicial(); pintarEstado(); };
-  ws.onclose = () => { S.wsAbierto = false; pintarEstado(); setTimeout(conectarWs, 1500); };
+  clearTimeout(S.tReconexion);
+  ws.onopen = () => {
+    S.wsAbierto = true;
+    S.dv = -1;               // fuerza a releer averías y PIDs (la ESP32 puede haberse reiniciado)
+    S.pidsCargados = false;
+    enviarHora();
+    cargarInicial();
+    pintarEstado();
+  };
+  ws.onclose = () => { S.wsAbierto = false; pintarEstado(); S.tReconexion = setTimeout(conectarWs, 1500); };
   ws.onerror = () => ws.close();
   ws.onmessage = (ev) => {
     let m;
@@ -163,16 +171,24 @@ function confirmar({ titulo, html, si = "Aceptar", peligro = true, entrada = nul
   });
 }
 
-const AL = { temp: { armada: true }, bat: { armada: true, desde: 0 }, visible: null };
+const AL = { temp: { armada: true }, bat: { armada: true, desde: 0 }, visible: null, cola: [] };
 function mostrarAlerta(tipo, titulo, valor, texto, nivel = "peligro") {
+  // Si ya hay una alerta en pantalla, la nueva espera a que se pulse «Entendido»
+  if (AL.visible && AL.visible !== tipo) { AL.cola.push([tipo, titulo, valor, texto, nivel]); return; }
   AL.visible = tipo;
+  $("#alerta").classList.remove("oculto");
   $("#alerta").className = nivel === "aviso" ? "aviso" : "";
   $("#alerta-titulo").textContent = titulo;
   $("#alerta-valor").textContent = valor;
   $("#alerta-texto").textContent = texto;
   if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
 }
-$("#alerta-ok").addEventListener("click", () => { $("#alerta").classList.add("oculto"); AL.visible = null; });
+$("#alerta-ok").addEventListener("click", () => {
+  $("#alerta").classList.add("oculto");
+  AL.visible = null;
+  const siguiente = AL.cola.shift();
+  if (siguiente) mostrarAlerta(...siguiente);
+});
 
 function revisarAlertas(m) {
   if (m.c !== 2) return;
@@ -215,9 +231,20 @@ function pintarEstado() {
   if (se) se.textContent = m && m.c === 2 ? "Conectado" : "Conectando con la centralita…";
 }
 
+// Escritura en el DOM solo si el contenido cambia (llegan 5 mensajes por segundo)
+function ponTexto(el, t) { if (el && el._t !== t) { el._t = t; el.textContent = t; } }
+function ponHtml(el, h) { if (el && el._h !== h) { el._h = h; el.innerHTML = h; } }
+const conUnidad = (valor, unidad) => (valor === "—" ? "—" : `${valor}<span class="uni secundario"> ${unidad}</span>`);
+
+const D = {};   // elementos de Inicio que se actualizan en vivo
+for (const [k, sel] of Object.entries({
+  rpm: "#rpm-valor", barra: "#rpm-relleno", vel: "#vel-valor", insignia: "#insignia-averias",
+  bandaAv: "#aviso-averias", memoria: "#aviso-memoria",
+})) D[k] = $(sel);
+
 function tarjeta(id, valor, unidad, nivel = "") {
-  const t = $(id);
-  t.querySelector(".cifra").innerHTML = valor === "—" ? "—" : `${valor}<span class="uni secundario"> ${unidad}</span>`;
+  const t = D[id] || (D[id] = $(id));
+  ponHtml(t.querySelector(".cifra"), conUnidad(valor, unidad));
   t.classList.toggle("aviso", nivel === "aviso");
   t.classList.toggle("peligro", nivel === "peligro");
 }
@@ -228,9 +255,10 @@ function recibirVivo(m) {
   const v = m.v || {};
   // Inicio
   const rpm = v[P.RPM];
-  $("#rpm-valor").textContent = num(rpm);
-  $("#rpm-relleno").style.width = rpm === undefined ? "0" : Math.min(100, rpm / 100) + "%";
-  $("#vel-valor").innerHTML = v[P.VEL] === undefined ? "—" : `${num(v[P.VEL])} <span class="uni secundario">km/h</span>`;
+  ponTexto(D.rpm, num(rpm));
+  const ancho = rpm === undefined ? "0" : Math.min(100, rpm / 100).toFixed(1) + "%";
+  if (D.barra.style.width !== ancho) D.barra.style.width = ancho;
+  ponHtml(D.vel, conUnidad(num(v[P.VEL]), "km/h"));
   const t = v[P.TEMP];
   tarjeta("#t-temp", num(t), "°C", t === undefined ? "" : t >= m.tl ? "peligro" : t >= m.tl - 8 ? "aviso" : "");
   const b = v[P.BAT];
@@ -239,17 +267,15 @@ function recibirVivo(m) {
   tarjeta("#t-aire", num(v[P.AIRE]), "°C");
 
   const nav = m.n + m.np;
-  const ins = $("#insignia-averias");
-  ins.textContent = nav;
-  ins.classList.toggle("oculto", !nav);
-  const ba = $("#aviso-averias");
-  ba.classList.toggle("oculto", !nav);
+  ponTexto(D.insignia, String(nav));
+  D.insignia.classList.toggle("oculto", !nav);
+  D.bandaAv.classList.toggle("oculto", !nav);
   if (nav) {
-    ba.querySelector("span").textContent =
+    ponTexto(D.bandaAv.querySelector("span"),
       `${m.n} ${m.n === 1 ? "avería guardada" : "averías guardadas"}` +
-      (m.np ? ` · ${m.np} pendiente${m.np > 1 ? "s" : ""}` : "") + (m.mk && m.m ? " · testigo encendido" : "");
+      (m.np ? ` · ${m.np} pendiente${m.np > 1 ? "s" : ""}` : "") + (m.mk && m.m ? " · testigo encendido" : ""));
   }
-  $("#aviso-memoria").classList.toggle("oculto", !m.fa);
+  D.memoria.classList.toggle("oculto", !m.fa);
   pintarGrabacion(m);
   pintarEstado();
 
@@ -266,12 +292,12 @@ function pintarGrabacion(m) {
   for (const id of ["#btn-grabar", "#btn-grab2"]) {
     const bt = $(id);
     bt.classList.toggle("grabando", !!m.g);
-    bt.querySelector("use").setAttribute("href", m.g ? "#i-parar" : "#i-grabar");
-    bt.querySelector("span").textContent = m.g ? `Parar ${duracion(m.gs)}` : "Grabar";
+    const icono = bt.querySelector("use");
+    const href = m.g ? "#i-parar" : "#i-grabar";
+    if (icono.getAttribute("href") !== href) icono.setAttribute("href", href);
+    ponTexto(bt.querySelector("span"), m.g ? `Parar ${duracion(m.gs)}` : "Grabar");
   }
-  if (vistaActual() === "grab") {
-    $("#grab-titulo").textContent = m.g ? `Grabando · ${duracion(m.gs)}` : "Sin grabar";
-  }
+  if (vistaActual() === "grab") ponTexto($("#grab-titulo"), m.g ? `Grabando · ${duracion(m.gs)}` : "Sin grabar");
 }
 
 async function alternarGrabacion() {
@@ -299,6 +325,7 @@ function construirDatos() {
   cont.innerHTML = S.pids.map((p) =>
     `<div class="valor" data-pid="${p.id}"><span class="nom">${esc(p.nombre)}</span><span><b class="num">—</b><span class="uni">${esc(p.unidad)}</span></span></div>`
   ).join("");
+  S.celdas = S.pids.map((p) => [p, cont.querySelector(`[data-pid="${p.id}"] .num`)]);
   pintarDatos();
 }
 
@@ -307,10 +334,7 @@ function pintarDatos() {
   const sin = !m || m.c !== 2 || !S.pids.length;
   $("#datos-vacio").classList.toggle("oculto", !sin);
   if (!m) return;
-  for (const p of S.pids) {
-    const el = $(`[data-pid="${p.id}"] .num`);
-    if (el) el.textContent = num(m.v[p.id], p.dec);
-  }
+  for (const [p, el] of S.celdas || []) ponTexto(el, num(m.v[p.id], p.dec));
 }
 alEntrar.datos = pintarDatos;
 
@@ -496,7 +520,7 @@ alEntrar.viaje = async () => {
     $$("[data-serie]").forEach((x) => x.classList.toggle("activo", x === b));
     dibujarGrafica();
   }));
-  const maxDe = (c) => Math.max(...(S.viaje[c] || []).filter((x) => x !== null), -Infinity);
+  const maxDe = (c) => { let m = -Infinity; for (const x of S.viaje[c] || []) if (x !== null && x > m) m = x; return m; };
   const t = S.viaje.t_s || [];
   const res = [
     ["Duración", duracion(t[t.length - 1] || 0), ""],
@@ -522,9 +546,9 @@ function dibujarGrafica(cursorX) {
   const s = SERIES.find((x) => x.col === S.serie);
   if (!s || !S.viaje) return;
   const xs = S.viaje.t_s || [], ys = S.viaje[s.col] || [];
-  const val = ys.filter((v) => v !== null);
-  if (!val.length) return;
-  let min = Math.min(...val), max = Math.max(...val);
+  let min = Infinity, max = -Infinity;
+  for (const v of ys) if (v !== null) { if (v < min) min = v; if (v > max) max = v; }
+  if (min === Infinity) return;
   if (s.col === "rpm" || s.col === "velocidad_kmh" || s.col.endsWith("_pct")) min = Math.min(0, min);
   if (max - min < 1e-6) { max += 1; min -= 1; }
   const pad = { l: 50, r: 10, t: 10, b: 24 };
@@ -542,25 +566,40 @@ function dibujarGrafica(cursorX) {
     g.textAlign = "right"; g.fillText(num(v, s.dec > 1 ? 2 : s.dec), pad.l - 6, y + 4);
   }
   g.textAlign = "center";
-  for (let i = 0; i <= 4; i++) {
-    const t = tMax * i / 4;
-    g.textAlign = i === 0 ? "left" : i === 4 ? "right" : "center";
-    g.fillText(duracion(t), X(t), H - 6);
+  // Eje de tiempo con etiquetas cortas para que no se monten
+  const corta = (seg) => {
+    seg = Math.round(seg);
+    const h = Math.floor(seg / 3600), m = Math.floor((seg % 3600) / 60);
+    return h ? `${h} h ${dos(m)}` : m ? `${m} min` : `${seg} s`;
+  };
+  for (let i = 0; i <= 3; i++) {
+    const t = tMax * i / 3;
+    g.textAlign = i === 0 ? "left" : i === 3 ? "right" : "center";
+    g.fillText(corta(t), X(t), H - 6);
   }
   g.strokeStyle = css.getPropertyValue("--acento");
   g.lineWidth = 2;
+  // Un trayecto largo tiene decenas de miles de puntos: se dibuja el mínimo y el máximo de cada píxel
   g.beginPath();
-  let dentro = false;
+  let dentro = false, colPx = -1, lo = 0, hi = 0;
+  const volcar = () => {
+    if (colPx < 0) return;
+    if (!dentro) { g.moveTo(colPx, Y(lo)); dentro = true; } else g.lineTo(colPx, Y(lo));
+    if (hi !== lo) g.lineTo(colPx, Y(hi));
+  };
   for (let i = 0; i < xs.length; i++) {
-    if (ys[i] === null) { dentro = false; continue; }
-    const px = X(xs[i]), py = Y(ys[i]);
-    if (!dentro) { g.moveTo(px, py); dentro = true; } else g.lineTo(px, py);
+    if (ys[i] === null) { volcar(); colPx = -1; dentro = false; continue; }
+    const px = Math.round(X(xs[i]));
+    if (px !== colPx) { volcar(); colPx = px; lo = hi = ys[i]; }
+    else { if (ys[i] < lo) lo = ys[i]; if (ys[i] > hi) hi = ys[i]; }
   }
+  volcar();
   g.stroke();
   if (cursorX !== undefined) {
     const t = Math.max(0, Math.min(tMax, (cursorX - pad.l) / (W - pad.l - pad.r) * tMax));
-    let k = 0;
-    for (let i = 0; i < xs.length; i++) if (Math.abs(xs[i] - t) < Math.abs(xs[k] - t)) k = i;
+    let a = 0, b = xs.length - 1;
+    while (b - a > 1) { const c = (a + b) >> 1; if (xs[c] < t) a = c; else b = c; }
+    const k = Math.abs(xs[a] - t) <= Math.abs(xs[b] - t) ? a : b;
     g.strokeStyle = css.getPropertyValue("--texto");
     g.lineWidth = 1;
     g.beginPath(); g.moveTo(X(xs[k]), pad.t); g.lineTo(X(xs[k]), H - pad.b); g.stroke();

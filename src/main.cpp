@@ -74,8 +74,9 @@ static void dormir() {
 static void revisarReposo() {
   if (AJ.simulador || webOtaEnCurso()) return;
   if (E.conexion == CONECTADO) return;
+  if (millis() - E.msUltimaRespuesta <= (uint32_t)MIN_SIN_RESPUESTA_REPOSO * 60000UL) return;
   if (WiFi.softAPgetStationNum() > 0) return;   // hay un iPhone conectado: no se duerme
-  if (millis() - E.msUltimaRespuesta > (uint32_t)MIN_SIN_RESPUESTA_REPOSO * 60000UL) dormir();
+  dormir();
 }
 
 // Al despertar por temporizador: se comprueba la centralita sin encender el WiFi
@@ -154,6 +155,12 @@ void loop() {
   revisarReposo();
 
   if (webReinicioPendiente()) {
+    {
+      BloqueoApp a;
+      grabParar();
+      mantGuardar();
+      recordsGuardar();
+    }
     delay(1000);
     ESP.restart();
   }

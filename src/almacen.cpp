@@ -25,7 +25,19 @@ bool almacenIniciar() {
 String rutaBase() { return AJ.simulador ? "/sim" : "/datos"; }
 
 size_t fsTotal() { return LittleFS.totalBytes(); }
-size_t fsLibre() { return LittleFS.totalBytes() - LittleFS.usedBytes(); }
+// usedBytes() recorre todo el sistema de archivos: se guarda en caché unos segundos
+static size_t libreCache = 0;
+static uint32_t msLibre = 0;
+static bool libreValido = false;
+void fsCambiado() { libreValido = false; }
+size_t fsLibre() {
+  if (!libreValido || millis() - msLibre > 5000) {
+    libreCache = LittleFS.totalBytes() - LittleFS.usedBytes();
+    msLibre = millis();
+    libreValido = true;
+  }
+  return libreCache;
+}
 
 bool horaValida() { return time(nullptr) > 1700000000; }
 uint32_t ahoraEpoch() { return horaValida() ? (uint32_t)time(nullptr) : 0; }
@@ -49,7 +61,9 @@ bool escribirJson(const String& ruta, const JsonDocument& doc) {
   size_t n = serializeJson(doc, f);
   f.close();
   if (n == 0) return false;
-  LittleFS.remove(ruta);
+  fsCambiado();
+  if (LittleFS.rename(tmp, ruta)) return true;   // sustituye el archivo de forma atómica
+  LittleFS.remove(ruta);                          // plan B si el sistema no deja sobrescribir
   return LittleFS.rename(tmp, ruta);
 }
 

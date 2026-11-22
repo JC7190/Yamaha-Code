@@ -80,10 +80,10 @@ void mantRevisar() {
     MANT.odometroKm += vel * dt / 3600.0f;
     cambiado = true;
   }
-  // Se guarda al parar el motor y, en marcha, cada 5 minutos
+  // Se guarda al parar el motor y, en marcha, cada 2 minutos
   bool parado = motorEnMarcha && !enMarcha;
   motorEnMarcha = enMarcha;
-  if (cambiado && (parado || ahora - msGuardado > 300000UL)) mantGuardar();
+  if (cambiado && (parado || ahora - msGuardado > 120000UL)) mantGuardar();
 }
 
 void mantJson(JsonDocument& d) {

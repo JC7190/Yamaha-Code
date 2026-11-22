@@ -23,7 +23,8 @@ String rutaBase();                 // "/datos" o "/sim"
 void almacenCambiarModo();         // recarga todo al cambiar entre moto y simulador
 bool horaValida();
 uint32_t ahoraEpoch();             // segundos UTC (0 si no hay hora)
-size_t fsLibre();
+size_t fsLibre();                  // en caché 5 s
+void fsCambiado();                 // invalida la caché tras borrar o crear archivos
 size_t fsTotal();
 bool leerJson(const String& ruta, JsonDocument& doc);
 bool escribirJson(const String& ruta, const JsonDocument& doc);

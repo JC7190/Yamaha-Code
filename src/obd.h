@@ -34,7 +34,7 @@ class Obd {
   uint32_t msUltimoIntento_ = 0;
   uint32_t ranura_ = 0;
   uint8_t idxOtros_ = 0;
-  uint8_t otros_[64];
+  uint8_t otros_[64] = {};
   uint8_t nOtros_ = 0;
 };
 

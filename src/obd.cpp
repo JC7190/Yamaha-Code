@@ -61,8 +61,8 @@ bool Obd::probarMetodo(int m) {
 
   // Comprobación: la centralita debe responder al servicio 01 PID 00
   uint8_t req[] = {0x01, 0x00};
-  Trama r[2];
-  int n = K.peticion(req, 2, r, 2);
+  Trama r[1];
+  int n = K.peticion(req, 2, r, 1);
   if (n < 1 || r[0].d[0] != 0x41) {
     Serial.println("[OBD] La inicialización respondió pero el servicio 01 no. Se descarta el método.");
     return false;
@@ -119,8 +119,8 @@ bool Obd::detectarPids() {
   nOtros_ = 0;
   for (int base = 0x00; base <= 0xE0; base += 0x20) {
     uint8_t req[] = {0x01, (uint8_t)base};
-    Trama r[2];
-    int n = K.peticion(req, 2, r, 2);
+    Trama r[1];
+    int n = K.peticion(req, 2, r, 1);
     if (n < 1 || r[0].d[0] != 0x41 || r[0].len < 6) {
       if (base == 0) {
         respuestaFallida();
@@ -162,8 +162,8 @@ bool Obd::detectarPids() {
 
 bool Obd::leerMil() {
   uint8_t req[] = {0x01, 0x01};
-  Trama r[2];
-  int n = K.peticion(req, 2, r, 2);
+  Trama r[1];
+  int n = K.peticion(req, 2, r, 1);
   if (n < 1 || r[0].d[0] != 0x41 || r[0].len < 3) {
     Serial.println("[OBD] PID 01 (estado del testigo) no disponible");
     return false;
@@ -228,8 +228,8 @@ bool Obd::leerAverias(bool porBorrado) {
 void Obd::leerFoto() {
   FotoFallo f = {};
   uint8_t req[] = {0x02, 0x02, 0x00};
-  Trama r[2];
-  int n = K.peticion(req, 3, r, 2);
+  Trama r[1];
+  int n = K.peticion(req, 3, r, 1);
   if (n < 1 || r[0].d[0] != 0x42 || r[0].len < 5) {
     Serial.println("[OBD] Foto del fallo (servicio 02) no disponible");
     Bloqueo b;
@@ -249,7 +249,7 @@ void Obd::leerFoto() {
   // PIDs admitidos en la foto
   uint32_t mapa = 0;
   uint8_t reqMapa[] = {0x02, 0x00, 0x00};
-  n = K.peticion(reqMapa, 3, r, 2);
+  n = K.peticion(reqMapa, 3, r, 1);
   bool hayMapa = n >= 1 && r[0].d[0] == 0x42 && r[0].len >= 7;
   if (hayMapa)
     mapa = ((uint32_t)r[0].d[3] << 24) | ((uint32_t)r[0].d[4] << 16) | ((uint32_t)r[0].d[5] << 8) | r[0].d[6];
@@ -260,7 +260,7 @@ void Obd::leerFoto() {
                             : E.v[pid].soportado;
     if (!admitido) continue;
     uint8_t q[] = {0x02, pid, 0x00};
-    n = K.peticion(q, 3, r, 2);
+    n = K.peticion(q, 3, r, 1);
     if (n < 1 || r[0].d[0] != 0x42 || r[0].len < 3 + TABLA_PIDS[i].bytes) continue;
     f.pid[f.n] = pid;
     f.valor[f.n] = decodificarPid(pid, &r[0].d[3]);
@@ -290,7 +290,7 @@ static void textoServicio09(Trama* r, int n, char* out, size_t len, size_t ultim
 void Obd::leerInfo() {
   uint8_t req[] = {0x09, 0x00};
   Trama r[8];
-  int n = K.peticion(req, 2, r, 2);
+  int n = K.peticion(req, 2, r, 1);
   char vin[24] = "", calid[40] = "";
   if (n >= 1 && r[0].d[0] == 0x49 && r[0].len >= 6) {
     const uint8_t* m = &r[0].d[r[0].len - 4];
@@ -317,8 +317,8 @@ void Obd::leerInfo() {
 
 bool Obd::leerPid(uint8_t pid) {
   uint8_t req[] = {0x01, pid};
-  Trama r[2];
-  int n = K.peticion(req, 2, r, 2);
+  Trama r[1];
+  int n = K.peticion(req, 2, r, 1);
   msUltimaPeticion_ = millis();
   if (n < 1) {
     respuestaFallida();
@@ -350,8 +350,8 @@ void Obd::borrarAverias() {
     return;
   }
   uint8_t req = 0x04;
-  Trama r[2];
-  int n = K.peticion(&req, 1, r, 2, 1000);
+  Trama r[1];
+  int n = K.peticion(&req, 1, r, 1, 1000);
   if (n >= 1 && r[0].d[0] == 0x44) {
     Serial.println("[OBD] Averías borradas");
     respuestaOk();

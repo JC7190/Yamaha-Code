@@ -62,6 +62,7 @@ void grabParar() {
   if (!activo) return;
   fich.close();
   activo = false;
+  fsCambiado();
   Serial.printf("[GRAB] Grabación terminada: %lu filas\n", (unsigned long)filas);
 }
 
@@ -150,5 +151,7 @@ void grabLista(JsonDocument& doc) {
 bool grabBorrar(const String& nombre) {
   if (nombre.indexOf('/') >= 0 || nombre.indexOf("..") >= 0 || !nombre.endsWith(".csv")) return false;
   if (activo && String(fich.name()).endsWith(nombre)) return false;
-  return LittleFS.remove(grabRuta(nombre));
+  bool ok = LittleFS.remove(grabRuta(nombre));
+  fsCambiado();
+  return ok;
 }

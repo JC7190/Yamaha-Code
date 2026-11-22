@@ -15,11 +15,13 @@ static AsyncWebServer server(80);
 static AsyncWebSocket ws("/ws");
 
 static volatile bool otaEnCurso = false;
+static volatile uint32_t msOtaDatos = 0;   // última vez que llegaron datos de una subida
 static volatile bool reinicioPendiente = false;
 static volatile bool cambioModo = false;
 static String otaError;
 
-bool webOtaEnCurso() { return otaEnCurso; }
+// Si una subida se corta, deja de contar como «en curso» a los 30 s
+bool webOtaEnCurso() { return otaEnCurso && millis() - msOtaDatos < 30000; }
 bool webReinicioPendiente() { return reinicioPendiente; }
 bool webCambioModoPendiente() {
   bool c = cambioModo;
@@ -82,7 +84,7 @@ static void enviarVivo() {
       for (size_t i = 0; i < NUM_TABLA_PIDS && n < (int)sizeof(buf) - 220; i++) {
         uint8_t p = TABLA_PIDS[i].id;
         const ValorPid& v = E.v[p];
-        if (!v.soportado || !v.valido || ahora - v.ms > 10000) continue;
+        if (!v.soportado || !v.valido || ahora - v.ms > 10000 || !isfinite(v.valor)) continue;
         n += snprintf(buf + n, sizeof(buf) - n, "%s\"%d\":%.*f", primero ? "" : ",", p,
                       TABLA_PIDS[i].decimales, v.valor);
         primero = false;
@@ -368,6 +370,7 @@ static void rutasApi() {
       },
       [](AsyncWebServerRequest* r, const String& nombre, size_t index, uint8_t* data, size_t len, bool final) {
         BloqueoApp a;
+        msOtaDatos = millis();
         if (index == 0) {
           otaEnCurso = true;
           grabParar();
@@ -385,14 +388,17 @@ static void rutasApi() {
           enviarOk(r, "Programa actualizado. Reiniciando...");
           reinicioPendiente = true;
         } else {
+          if (Update.isRunning()) Update.abort();
           enviarError(r, otaError.length() ? otaError : String("Error al escribir el programa"));
         }
         otaEnCurso = false;
       },
       [](AsyncWebServerRequest* r, const String& nombre, size_t index, uint8_t* data, size_t len, bool final) {
+        msOtaDatos = millis();
         if (index == 0) {
           otaError = "";
           otaEnCurso = true;
+          if (Update.isRunning()) Update.abort();   // subida anterior cortada a medias
           Serial.printf("[OTA] Recibiendo %s\n", nombre.c_str());
           { BloqueoApp a; grabParar(); }
           if (len == 0 || data[0] != 0xE9) {

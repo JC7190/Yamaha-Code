@@ -110,6 +110,7 @@ static void procesarCabecera() {
 }
 
 void actWebEmpezar(size_t tamano) {
+  if (fich) fich.close();   // por si una subida anterior se cortó a medias
   error = "";
   lenCab = restante = relleno = 0;
   fin = vistoIndex = false;
@@ -161,6 +162,7 @@ void actWebDatos(const uint8_t* d, size_t n) {
 
 bool actWebTerminar() {
   if (fich) fich.close();
+  fsCambiado();
   if (error.length() == 0 && (restante > 0 || !vistoIndex))
     error = restante > 0 ? "El archivo está incompleto" : "Falta index.html en el archivo";
   if (error.length()) {

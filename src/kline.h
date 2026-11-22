@@ -45,7 +45,7 @@ class KLine {
   bool trazas = true;
 
  private:
-  void escribirByte(uint8_t b);
+  void escribirByte(uint8_t b, bool pausaP4);
   void vaciarEntrada();
   void esperarP3();
   void soltarTx();      // pasa el pin TX a GPIO
