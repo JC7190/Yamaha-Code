@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="NMAX Diag">
+<meta name="theme-color" content="#0B0F14">
+<meta name="format-detection" content="telephone=no">
+<title>NMAX Diag</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-inicio" viewBox="0 0 24 24"><path d="M3 11.5 12 4l9 7.5M5.5 9.5V20h5v-5.5h3V20h5V9.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></symbol>
+  <symbol id="i-datos" viewBox="0 0 24 24"><path d="M4 18a8 8 0 1 1 16 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="m12 18 4-6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><circle cx="12" cy="18" r="1.6" fill="currentColor"/></symbol>
+  <symbol id="i-motor" viewBox="0 0 24 24"><path d="M3 10v5M3 12.5h2M5 9h2V7h5v2h2.5l2 2H19v-1.5h2V16h-2v-1.5h-1.5L15 17H7.5L5 15V9Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/><path d="M8.5 7V5h4v2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+  <symbol id="i-mas" viewBox="0 0 24 24"><g fill="currentColor"><rect x="4" y="4" width="6.5" height="6.5" rx="1.6"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.6"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.6"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.6"/></g></symbol>
+  <symbol id="i-grabar" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="4.5" fill="currentColor"/></symbol>
+  <symbol id="i-parar" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"/></symbol>
+  <symbol id="i-trofeo" viewBox="0 0 24 24"><path d="M8 4h8v5a4 4 0 0 1-8 0V4ZM8 6H5v1.5A3 3 0 0 0 8 10.5M16 6h3v1.5a3 3 0 0 1-3 3M12 13v4M8.5 20h7M10 17h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></symbol>
+  <symbol id="i-llave" viewBox="0 0 24 24"><path d="M14.7 6.3a4.5 4.5 0 0 0-5.9 5.6L4 16.7 7.3 20l4.8-4.8a4.5 4.5 0 0 0 5.6-5.9l-2.6 2.6-2.4-.6-.6-2.4 2.6-2.6Z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/></symbol>
+  <symbol id="i-chip" viewBox="0 0 24 24"><rect x="6.5" y="6.5" width="11" height="11" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M9.5 3v3.5M14.5 3v3.5M9.5 17.5V21M14.5 17.5V21M3 9.5h3.5M3 14.5h3.5M17.5 9.5H21M17.5 14.5H21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  <symbol id="i-pdf" viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6V3Z M14 3v4h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9 12h6M9 15.5h6M9 8.5h2.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  <symbol id="i-subir" viewBox="0 0 24 24"><path d="M12 16V4M7 9l5-5 5 5M5 15v4h14v-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></symbol>
+  <symbol id="i-ajustes" viewBox="0 0 24 24"><path d="M4 7h9M17 7h3M4 17h3M11 17h9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="15" cy="7" r="2.2" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="9" cy="17" r="2.2" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+  <symbol id="i-flecha" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-atras" viewBox="0 0 24 24"><path d="m15 5-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-historial" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.4-5.7M4 4v4h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 8v4.5l3 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  <symbol id="i-papelera" viewBox="0 0 24 24"><path d="M4 7h16M9.5 7V4.5h5V7M6.5 7l1 13h9l1-13M10 11v5.5M14 11v5.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></symbol>
+  <symbol id="i-descargar" viewBox="0 0 24 24"><path d="M12 4v12M7 11l5 5 5-5M5 20h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></symbol>
+  <symbol id="i-recargar" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.4-5.7M20 4v4h-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-aviso" viewBox="0 0 24 24"><path d="M12 3.5 2.5 20h19L12 3.5Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M12 10v4.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><circle cx="12" cy="17.3" r="1.3" fill="currentColor"/></symbol>
+  <symbol id="i-temp" viewBox="0 0 24 24"><path d="M10 13.5V5a2 2 0 1 1 4 0v8.5a4 4 0 1 1-4 0Z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 9v7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  <symbol id="i-bateria" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M7 7V5h3v2M14 7V5h3v2M6.5 13h3M15 11.5v3M13.5 13h3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  <symbol id="i-acel" viewBox="0 0 24 24"><path d="M4 18 20 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+  <symbol id="i-aire" viewBox="0 0 24 24"><path d="M3 9h11a3 3 0 1 0-3-3M3 13h15a3 3 0 1 1-3 3M3 17h7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+</svg>
+
+<!-- Pantalla de arranque -->
+<div id="splash">
+  <img src="logo-yamaha.png" alt="Yamaha" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'splash-texto',textContent:'NMAX 125'}))">
+  <p id="splash-estado">Conectando con la centralita…</p>
+</div>
+
+<div id="app">
+  <header id="cabecera">
+    <button id="btn-atras" class="btn-icono oculto" aria-label="Atrás"><svg><use href="#i-atras"/></svg></button>
+    <h1 id="titulo">Inicio</h1>
+    <span id="estado" class="pastilla">—</span>
+  </header>
+
+  <main id="contenido">
+    <!-- ================= INICIO ================= -->
+    <section id="v-inicio" class="vista activa">
+      <div class="inicio-rejilla">
+        <div class="tarjeta rpm-panel">
+          <div class="rpm-cifra"><span id="rpm-valor">—</span><small>rpm</small></div>
+          <div class="rpm-barra"><div id="rpm-relleno"></div></div>
+          <div class="rpm-escala"><span>0</span><span>2</span><span>4</span><span>6</span><span>8</span><span>10</span></div>
+          <div class="fila-vel"><span class="secundario">Velocidad</span><b id="vel-valor">—</b></div>
+        </div>
+        <div class="inicio-lado">
+          <div class="tarjetas4">
+            <div class="tarjeta mini" id="t-temp"><svg><use href="#i-temp"/></svg><span class="etq">Temp. motor</span><b class="cifra">—</b></div>
+            <div class="tarjeta mini" id="t-bat"><svg><use href="#i-bateria"/></svg><span class="etq">Batería</span><b class="cifra">—</b></div>
+            <div class="tarjeta mini" id="t-acel"><svg><use href="#i-acel"/></svg><span class="etq">Acelerador</span><b class="cifra">—</b></div>
+            <div class="tarjeta mini" id="t-aire"><svg><use href="#i-aire"/></svg><span class="etq">Aire admisión</span><b class="cifra">—</b></div>
+          </div>
+          <button id="aviso-averias" class="banda banda-peligro oculto"><svg><use href="#i-motor"/></svg><span></span><svg class="chev"><use href="#i-flecha"/></svg></button>
+          <button id="aviso-mant" class="banda banda-aviso oculto"><svg><use href="#i-llave"/></svg><span></span><svg class="chev"><use href="#i-flecha"/></svg></button>
+          <div id="aviso-memoria" class="banda banda-aviso oculto"><svg><use href="#i-aviso"/></svg><span>Memoria casi llena: borra trayectos antiguos.</span></div>
+          <div class="botones2">
+            <button id="btn-grabar" class="boton"><svg><use href="#i-grabar"/></svg><span>Grabar</span></button>
+            <button id="btn-ir-records" class="boton"><svg><use href="#i-trofeo"/></svg><span>Récords</span></button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= DATOS ================= -->
+    <section id="v-datos" class="vista">
+      <p id="datos-vacio" class="vacio oculto">Sin datos: no hay conexión con la centralita.</p>
+      <div id="lista-datos" class="lista-cols"></div>
+    </section>
+
+    <!-- ================= AVERÍAS ================= -->
+    <section id="v-averias" class="vista">
+      <div class="tarjeta mil" id="mil">
+        <svg><use href="#i-motor"/></svg>
+        <div><b id="mil-texto">Testigo del motor</b><span id="mil-sub" class="secundario"></span></div>
+        <button id="btn-releer" class="btn-icono" aria-label="Leer de nuevo"><svg><use href="#i-recargar"/></svg></button>
+      </div>
+      <h2>Averías guardadas</h2>
+      <div id="lista-guardadas" class="lista-cols"></div>
+      <h2>Averías pendientes</h2>
+      <div id="lista-pendientes" class="lista-cols"></div>
+      <div class="botones2">
+        <button id="btn-historial" class="boton"><svg><use href="#i-historial"/></svg><span>Historial</span></button>
+        <button id="btn-borrar" class="boton boton-peligro"><svg><use href="#i-papelera"/></svg><span>Borrar averías</span></button>
+      </div>
+    </section>
+
+    <section id="v-foto" class="vista">
+      <div class="tarjeta cabecera-dtc"><b id="foto-cod" class="cod"></b><span id="foto-desc"></span></div>
+      <p id="foto-nota" class="secundario"></p>
+      <div id="foto-lista" class="lista-cols"></div>
+    </section>
+
+    <section id="v-historial" class="vista">
+      <p class="secundario">Se guarda en el aparato cada avería con su fecha, aunque se borre de la centralita.</p>
+      <div id="lista-historial" class="lista-cols"></div>
+    </section>
+
+    <!-- ================= MÁS ================= -->
+    <section id="v-mas" class="vista">
+      <div class="lista-cols menu">
+        <button class="fila" data-ir="grab"><svg><use href="#i-grabar"/></svg><span>Grabación</span><svg class="chev"><use href="#i-flecha"/></svg></button>
+        <button class="fila" data-ir="records"><svg><use href="#i-trofeo"/></svg><span>Récords</span><svg class="chev"><use href="#i-flecha"/></svg></button>
+        <button class="fila" data-ir="mant"><svg><use href="#i-llave"/></svg><span>Mantenimiento</span><span id="mas-mant" class="insignia oculto">!</span><svg class="chev"><use href="#i-flecha"/></svg></button>
+        <button class="fila" data-ir="ecu"><svg><use href="#i-chip"/></svg><span>Centralita</span><svg class="chev"><use href="#i-flecha"/></svg></button>
+        <button class="fila" data-ir="pdf"><svg><use href="#i-pdf"/></svg><span>Informe PDF</span><svg class="chev"><use href="#i-flecha"/></svg></button>
+        <button class="fila" data-ir="ota"><svg><use href="#i-subir"/></svg><span>Actualizar programa</span><svg class="chev"><use href="#i-flecha"/></svg></button>
+        <button class="fila" data-ir="ajustes"><svg><use href="#i-ajustes"/></svg><span>Ajustes</span><svg class="chev"><use href="#i-flecha"/></svg></button>
+      </div>
+    </section>
+
+    <section id="v-grab" class="vista">
+      <div class="tarjeta grab-estado">
+        <div><b id="grab-titulo">Sin grabar</b><span id="grab-sub" class="secundario">Una fila por segundo en la memoria del aparato.</span></div>
+        <button id="btn-grab2" class="boton boton-acento"><svg><use href="#i-grabar"/></svg><span>Grabar</span></button>
+      </div>
+      <div class="tarjeta">
+        <div class="fila-sep"><span class="secundario">Memoria</span><b id="mem-texto">—</b></div>
+        <div class="barra"><div id="mem-barra"></div></div>
+      </div>
+      <h2>Trayectos guardados</h2>
+      <p id="viajes-vacio" class="vacio oculto">Aún no hay trayectos.</p>
+      <div id="lista-viajes" class="lista-cols"></div>
+    </section>
+
+    <section id="v-viaje" class="vista">
+      <div class="chips" id="viaje-series"></div>
+      <div class="tarjeta grafica"><canvas id="grafica"></canvas><div id="grafica-cursor" class="secundario">Toca la gráfica para ver los valores.</div></div>
+      <div class="tarjetas4" id="viaje-resumen"></div>
+      <div class="botones2">
+        <a id="btn-csv" class="boton" href="#"><svg><use href="#i-descargar"/></svg><span>Descargar CSV</span></a>
+        <button id="btn-borrar-viaje" class="boton boton-peligro"><svg><use href="#i-papelera"/></svg><span>Borrar</span></button>
+      </div>
+    </section>
+
+    <section id="v-records" class="vista">
+      <div class="lista-cols records">
+        <div class="tarjeta record"><span class="etq">Velocidad máxima</span><b id="rec-vmax" class="cifra-g">—</b><span id="rec-fvmax" class="secundario"></span></div>
+        <div class="tarjeta record"><span class="etq">Revoluciones máximas</span><b id="rec-rpm" class="cifra-g">—</b><span id="rec-frpm" class="secundario"></span></div>
+        <div class="tarjeta record"><span class="etq">0 a 50 km/h</span><b id="rec-050" class="cifra-g">—</b><span id="rec-f050" class="secundario"></span></div>
+      </div>
+      <div class="tarjeta" id="medir-panel">
+        <b id="medir-titulo">Medir 0–50</b>
+        <p id="medir-texto" class="secundario">Pulsa el botón con la moto parada y acelera a fondo hasta pasar de 50 km/h.</p>
+        <button id="btn-medir" class="boton boton-acento"><span>Medir 0–50</span></button>
+      </div>
+      <button id="btn-reiniciar-rec" class="boton boton-peligro ancho"><svg><use href="#i-papelera"/></svg><span>Reiniciar récords</span></button>
+    </section>
+
+    <section id="v-mant" class="vista">
+      <div class="tarjeta">
+        <div class="fila-sep"><span class="secundario">Cuentakilómetros</span><b id="mant-km" class="cifra">—</b></div>
+        <p id="mant-km-origen" class="secundario"></p>
+        <div class="fila-sep"><span class="secundario">Horas de motor</span><b id="mant-horas" class="cifra">—</b></div>
+        <button id="btn-odo" class="boton ancho"><span>Corregir cuentakilómetros</span></button>
+      </div>
+      <div id="lista-mant" class="lista-cols"></div>
+    </section>
+
+    <section id="v-ecu" class="vista">
+      <div class="lista-cols" id="lista-ecu"></div>
+    </section>
+
+    <section id="v-pdf" class="vista">
+      <div class="tarjeta">
+        <b>Informe para el taller</b>
+        <p class="secundario">Incluye averías con su descripción, foto del fallo, estado del testigo, datos de la centralita, valores actuales, mantenimiento e historial. Se genera en el iPhone.</p>
+        <button id="btn-pdf" class="boton boton-acento ancho"><svg><use href="#i-pdf"/></svg><span>Generar informe PDF</span></button>
+        <p id="pdf-estado" class="secundario"></p>
+      </div>
+    </section>
+
+    <section id="v-ota" class="vista">
+      <div class="tarjeta">
+        <b>Actualizar programa</b>
+        <p class="secundario">Elige el archivo <code>firmware.bin</code> (desde Archivos del iPhone). No quites el aparato ni apagues la moto mientras se actualiza.</p>
+        <label class="boton ancho"><svg><use href="#i-subir"/></svg><span id="ota-nombre">Elegir archivo</span><input id="ota-archivo" type="file" accept=".bin,application/octet-stream" hidden></label>
+        <button id="btn-ota" class="boton boton-acento ancho" disabled><span>Actualizar</span></button>
+        <div class="barra"><div id="ota-barra"></div></div>
+        <p id="ota-estado" class="secundario"></p>
+        <p class="secundario">Versión instalada: <b id="ota-version">—</b></p>
+      </div>
+    </section>
+
+    <section id="v-ajustes" class="vista">
+      <div class="tarjeta">
+        <b>Alerta de temperatura del motor</b>
+        <div class="paso">
+          <button class="btn-icono grande" id="tl-menos" aria-label="Bajar">−</button>
+          <b id="tl-valor" class="cifra-g">100 °C</b>
+          <button class="btn-icono grande" id="tl-mas" aria-label="Subir">+</button>
+        </div>
+        <p class="secundario">Alerta de batería baja por debajo de <b id="bat-limite">11,8 V</b>.</p>
+      </div>
+      <div class="tarjeta">
+        <label class="interruptor"><span><b>Modo simulador</b><span class="secundario">Datos y averías de ejemplo, sin moto. Usa su propio historial.</span></span><input type="checkbox" id="sw-sim"><i></i></label>
+      </div>
+    </section>
+  </main>
+
+  <nav id="pestanas">
+    <button data-tab="inicio" class="activa"><svg><use href="#i-inicio"/></svg><span>Inicio</span></button>
+    <button data-tab="datos"><svg><use href="#i-datos"/></svg><span>Datos</span></button>
+    <button data-tab="averias"><svg><use href="#i-motor"/></svg><span>Averías</span><em id="insignia-averias" class="insignia oculto">0</em></button>
+    <button data-tab="mas"><svg><use href="#i-mas"/></svg><span>Más</span></button>
+  </nav>
+</div>
+
+<!-- Hoja de confirmación -->
+<div id="velo" class="oculto"></div>
+<div id="hoja" class="oculto" role="dialog" aria-modal="true">
+  <div class="asa"></div>
+  <h3 id="hoja-titulo"></h3>
+  <div id="hoja-texto"></div>
+  <div class="botones2">
+    <button id="hoja-no" class="boton">Cancelar</button>
+    <button id="hoja-si" class="boton boton-peligro">Aceptar</button>
+  </div>
+</div>
+
+<!-- Alerta a pantalla completa -->
+<div id="alerta" class="oculto" role="alertdialog">
+  <svg><use href="#i-aviso"/></svg>
+  <h2 id="alerta-titulo"></h2>
+  <p id="alerta-valor" class="cifra-g"></p>
+  <p id="alerta-texto"></p>
+  <button id="alerta-ok" class="boton">Entendido</button>
+</div>
+
+<div id="aviso" class="oculto"></div>
+
+<script src="dtc.js"></script>
+<script src="pdf.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
