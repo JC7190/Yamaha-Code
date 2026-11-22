@@ -5,6 +5,7 @@
 #include <Update.h>
 #include <WiFi.h>
 #include <sys/time.h>
+#include "actweb.h"
 #include "almacen.h"
 #include "config.h"
 #include "estado.h"
@@ -351,6 +352,29 @@ static void rutasApi() {
     if (!LittleFS.exists(ruta)) { r->send(404); return; }
     r->send(LittleFS, ruta, "text/csv", r->hasParam("descargar"));
   });
+
+  // Actualización de la web (pantallas) por WiFi, sin borrar los datos
+  server.on(
+      "/api/ota-web", HTTP_POST,
+      [](AsyncWebServerRequest* r) {
+        bool ok;
+        {
+          BloqueoApp a;
+          ok = actWebTerminar();
+        }
+        if (ok) enviarOk(r, "Web actualizada. Recarga la página.");
+        else enviarError(r, actWebError());
+        otaEnCurso = false;
+      },
+      [](AsyncWebServerRequest* r, const String& nombre, size_t index, uint8_t* data, size_t len, bool final) {
+        BloqueoApp a;
+        if (index == 0) {
+          otaEnCurso = true;
+          grabParar();
+          actWebEmpezar(r->contentLength());
+        }
+        actWebDatos(data, len);
+      });
 
   // Actualización del programa por WiFi
   server.on(

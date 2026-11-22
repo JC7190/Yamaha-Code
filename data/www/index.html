@@ -126,7 +126,7 @@
         <button class="fila" data-ir="mant"><svg><use href="#i-llave"/></svg><span>Mantenimiento</span><span id="mas-mant" class="insignia oculto">!</span><svg class="chev"><use href="#i-flecha"/></svg></button>
         <button class="fila" data-ir="ecu"><svg><use href="#i-chip"/></svg><span>Centralita</span><svg class="chev"><use href="#i-flecha"/></svg></button>
         <button class="fila" data-ir="pdf"><svg><use href="#i-pdf"/></svg><span>Informe PDF</span><svg class="chev"><use href="#i-flecha"/></svg></button>
-        <button class="fila" data-ir="ota"><svg><use href="#i-subir"/></svg><span>Actualizar programa</span><svg class="chev"><use href="#i-flecha"/></svg></button>
+        <button class="fila" data-ir="ota"><svg><use href="#i-subir"/></svg><span>Actualizar por WiFi</span><svg class="chev"><use href="#i-flecha"/></svg></button>
         <button class="fila" data-ir="ajustes"><svg><use href="#i-ajustes"/></svg><span>Ajustes</span><svg class="chev"><use href="#i-flecha"/></svg></button>
       </div>
     </section>
@@ -186,21 +186,23 @@
     <section id="v-pdf" class="vista">
       <div class="tarjeta">
         <b>Informe para el taller</b>
-        <p class="secundario">Incluye averías con su descripción, foto del fallo, estado del testigo, datos de la centralita, valores actuales, mantenimiento e historial. Se genera en el iPhone.</p>
-        <button id="btn-pdf" class="boton boton-acento ancho"><svg><use href="#i-pdf"/></svg><span>Generar informe PDF</span></button>
+        <p class="secundario">Incluye averías con su descripción, foto del fallo, estado del testigo, datos de la centralita, valores actuales, mantenimiento e historial. Se genera en el iPhone; primero ves una vista previa y desde ella lo descargas en PDF.</p>
+        <button id="btn-pdf" class="boton boton-acento ancho"><svg><use href="#i-pdf"/></svg><span>Ver informe</span></button>
         <p id="pdf-estado" class="secundario"></p>
       </div>
     </section>
 
     <section id="v-ota" class="vista">
       <div class="tarjeta">
-        <b>Actualizar programa</b>
-        <p class="secundario">Elige el archivo <code>firmware.bin</code> (desde Archivos del iPhone). No quites el aparato ni apagues la moto mientras se actualiza.</p>
-        <label class="boton ancho"><svg><use href="#i-subir"/></svg><span id="ota-nombre">Elegir archivo</span><input id="ota-archivo" type="file" accept=".bin,application/octet-stream" hidden></label>
+        <b>Actualizar por WiFi</b>
+        <p class="secundario">Elige desde Archivos del iPhone uno de estos dos archivos:</p>
+        <p class="secundario"><code>firmware.bin</code> · el programa que habla con la moto.<br><code>web.tar</code> · las pantallas del iPhone.</p>
+        <p class="secundario">En los dos casos se conservan el historial, los trayectos, los récords, el mantenimiento y los ajustes. No quites el aparato mientras se actualiza.</p>
+        <label class="boton ancho"><svg><use href="#i-subir"/></svg><span id="ota-nombre">Elegir archivo</span><input id="ota-archivo" type="file" accept=".bin,.tar,application/octet-stream,application/x-tar" hidden></label>
         <button id="btn-ota" class="boton boton-acento ancho" disabled><span>Actualizar</span></button>
         <div class="barra"><div id="ota-barra"></div></div>
         <p id="ota-estado" class="secundario"></p>
-        <p class="secundario">Versión instalada: <b id="ota-version">—</b></p>
+        <p class="secundario">Versión del programa instalada: <b id="ota-version">—</b></p>
       </div>
     </section>
 
@@ -247,6 +249,16 @@
   <p id="alerta-valor" class="cifra-g"></p>
   <p id="alerta-texto"></p>
   <button id="alerta-ok" class="boton">Entendido</button>
+</div>
+
+<!-- Vista previa del informe -->
+<div id="previa" class="oculto" role="dialog" aria-modal="true">
+  <div class="previa-barra">
+    <button id="previa-cerrar" class="boton">Cerrar</button>
+    <b>Vista previa</b>
+    <button id="previa-descargar" class="boton boton-acento"><svg><use href="#i-descargar"/></svg><span>Descargar PDF</span></button>
+  </div>
+  <div id="previa-cuerpo"><div id="previa-hoja"></div></div>
 </div>
 
 <div id="aviso" class="oculto"></div>

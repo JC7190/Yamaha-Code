@@ -96,7 +96,7 @@ const VISTAS = {
   inicio: { t: "Inicio" }, datos: { t: "Datos en vivo" }, averias: { t: "Averías" }, mas: { t: "Más" },
   foto: { t: "Foto del fallo" }, historial: { t: "Historial de averías" }, grab: { t: "Grabación" },
   viaje: { t: "Trayecto" }, records: { t: "Récords" }, mant: { t: "Mantenimiento" }, ecu: { t: "Centralita" },
-  pdf: { t: "Informe PDF" }, ota: { t: "Actualizar programa" }, ajustes: { t: "Ajustes" },
+  pdf: { t: "Informe PDF" }, ota: { t: "Actualizar" }, ajustes: { t: "Ajustes" },
 };
 const PESTANAS = ["inicio", "datos", "averias", "mas"];
 const alEntrar = {};
@@ -757,20 +757,34 @@ $("#sw-sim").addEventListener("change", async (ev) => {
 // ------------------------------------------------------------------ OTA
 
 let archivoOta = null;
+let tipoOta = null;   // "programa" o "web"
 $("#ota-archivo").addEventListener("change", (ev) => {
   archivoOta = ev.target.files[0] || null;
+  tipoOta = null;
+  if (archivoOta) {
+    const n = archivoOta.name.toLowerCase();
+    tipoOta = n.endsWith(".bin") ? "programa" : n.endsWith(".tar") ? "web" : null;
+  }
   $("#ota-nombre").textContent = archivoOta ? `${archivoOta.name} (${tamano(archivoOta.size)})` : "Elegir archivo";
-  $("#btn-ota").disabled = !archivoOta;
+  $("#ota-estado").textContent = archivoOta && !tipoOta ? "Ese archivo no vale: tiene que ser firmware.bin o web.tar." :
+    tipoOta === "web" ? "Se actualizarán las pantallas." : tipoOta === "programa" ? "Se actualizará el programa." : "";
+  $("#btn-ota").disabled = !tipoOta;
 });
 alEntrar.ota = async () => {
   try { const e = await api("/api/estado"); $("#ota-version").textContent = "v" + e.version; } catch (e) { /* */ }
 };
 $("#btn-ota").addEventListener("click", async () => {
   if (!archivoOta) return;
-  const ok = await confirmar({ titulo: "Actualizar programa", html: `<p>Se instalará <b>${esc(archivoOta.name)}</b> y el aparato se reiniciará.</p>`, si: "Actualizar", peligro: false });
+  const esWeb = tipoOta === "web";
+  const ok = await confirmar({
+    titulo: esWeb ? "Actualizar pantallas" : "Actualizar programa",
+    html: esWeb ? `<p>Se instalarán las pantallas de <b>${esc(archivoOta.name)}</b>. Tus datos se conservan.</p>`
+                : `<p>Se instalará <b>${esc(archivoOta.name)}</b> y el aparato se reiniciará. Tus datos se conservan.</p>`,
+    si: "Actualizar", peligro: false,
+  });
   if (!ok) return;
   const fd = new FormData();
-  fd.append("firmware", archivoOta, archivoOta.name);
+  fd.append(esWeb ? "web" : "firmware", archivoOta, archivoOta.name);
   const xhr = new XMLHttpRequest();
   $("#btn-ota").disabled = true;
   $("#ota-estado").textContent = "Subiendo…";
@@ -785,19 +799,21 @@ $("#btn-ota").addEventListener("click", async () => {
     let j = {};
     try { j = JSON.parse(xhr.responseText); } catch (e) { /* */ }
     if (xhr.status === 200 && j.ok) {
-      $("#ota-estado").textContent = "Actualizado. El aparato se reinicia; la página se recargará sola.";
-      setTimeout(() => location.reload(), 9000);
+      $("#ota-estado").textContent = esWeb ? "Pantallas actualizadas. Recargando…" : "Actualizado. El aparato se reinicia; la página se recargará sola.";
+      setTimeout(() => location.reload(), esWeb ? 1500 : 9000);
     } else {
       $("#ota-estado").textContent = "Error: " + (j.msg || xhr.status);
       $("#btn-ota").disabled = false;
     }
   };
   xhr.onerror = () => { $("#ota-estado").textContent = "Se ha perdido la conexión durante la subida."; $("#btn-ota").disabled = false; };
-  xhr.open("POST", "/api/ota");
+  xhr.open("POST", esWeb ? "/api/ota-web" : "/api/ota");
   xhr.send(fd);
 });
 
 // ------------------------------------------------------------------ informe PDF
+
+const INF = { blob: null, nombre: "" };
 
 $("#btn-pdf").addEventListener("click", async () => {
   const est = $("#pdf-estado");
@@ -807,83 +823,47 @@ $("#btn-pdf").addEventListener("click", async () => {
       api("/api/averias"), api("/api/ecu"), api("/api/historial"), api("/api/mant"), api("/api/records"),
     ]);
     const datos = await api("/api/pids").catch(() => ({ pids: [] }));
-    const bytes = generarInforme({ av, ecu, hist, mant, rec, pids: datos.pids || [], vivo: S.vivo });
-    const blob = new Blob([bytes], { type: "application/pdf" });
+    const ahora = Date.now() / 1000;
+    const bloques = bloquesInforme({ av, ecu, hist, mant, rec, pids: datos.pids || [], vivo: S.vivo });
+    INF.blob = new Blob([pdfInforme(bloques, ahora)], { type: "application/pdf" });
     const d = new Date();
-    const nombre = `informe-nmax-${d.getFullYear()}${dos(d.getMonth() + 1)}${dos(d.getDate())}-${dos(d.getHours())}${dos(d.getMinutes())}.pdf`;
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = nombre;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 60000);
-    est.textContent = `Informe generado: ${nombre}`;
+    INF.nombre = `informe-nmax-${d.getFullYear()}${dos(d.getMonth() + 1)}${dos(d.getDate())}-${dos(d.getHours())}${dos(d.getMinutes())}.pdf`;
+    $("#previa-hoja").innerHTML = htmlInforme(bloques, ahora);
+    $("#previa").classList.remove("oculto");
+    $("#previa-cuerpo").scrollTop = 0;
+    est.textContent = "";
   } catch (e) {
     est.textContent = "No se ha podido generar: " + e.message;
   }
 });
 
-function generarInforme({ av, ecu, hist, mant, rec, pids, vivo }) {
-  const pdf = new Pdf();
-  const M = 46, ANCHO = pdf.W - 2 * M;
-  let y = 0;
-  const AZUL = "#21409A", GRIS = "#5A6573", ROJO = "#C0392B", NARANJA = "#B9770E";
-  const cabecera = () => {
-    pdf.rect(0, 0, pdf.W, 64, AZUL);
-    pdf.texto(M, 30, "Informe de diagnosis · Yamaha NMAX 125", { tam: 17, negrita: true, color: "#FFFFFF" });
-    pdf.texto(M, 50, "GPD125-A (BALD) · generado el " + fecha(Date.now() / 1000), { tam: 10, color: "#DDE3F5" });
-    y = 92;
-  };
-  const espacio = (h) => { if (y + h > pdf.H - 50) { pdf.nuevaPagina(); cabecera(); } };
-  const seccion = (t) => {
-    espacio(40);
-    y += 8;
-    pdf.texto(M, y, t, { tam: 13, negrita: true, color: AZUL });
-    y += 6;
-    pdf.linea(M, y, M + ANCHO, y, AZUL, 1);
-    y += 16;
-  };
-  const par = (k, v, color) => {
-    espacio(16);
-    pdf.texto(M, y, k, { tam: 10, color: GRIS });
-    const lineas = pdf.partir(v, ANCHO - 170, 10, true);
-    lineas.forEach((l, i) => pdf.texto(M + 170, y + i * 13, l, { tam: 10, negrita: true, color: color || "#111111" }));
-    y += 13 * lineas.length + 3;
-  };
-  const parrafo = (t, o = {}) => {
-    for (const l of pdf.partir(t, ANCHO, o.tam || 10, o.negrita)) {
-      espacio(14);
-      pdf.texto(M, y, l, { tam: o.tam || 10, color: o.color || "#111111", negrita: o.negrita });
-      y += 13;
-    }
-  };
-  const dtc = (cod, extra, color) => {
-    const lineas = pdf.partir(descripcionDtc(cod), ANCHO - 70, 10, false);
-    espacio(14 * lineas.length + 18);
-    pdf.texto(M, y, cod, { tam: 12, negrita: true, color });
-    lineas.forEach((l, i) => pdf.texto(M + 70, y + i * 13, l, { tam: 10 }));
-    y += 13 * lineas.length;
-    if (extra) { pdf.texto(M + 70, y, extra, { tam: 9, color: GRIS }); y += 12; }
-    y += 6;
-  };
-  const tabla = (filas) => {   // [nombre, valor]
-    const col = ANCHO / 2;
-    for (let i = 0; i < filas.length; i += 2) {
-      espacio(16);
-      for (let k = 0; k < 2 && i + k < filas.length; k++) {
-        const [n, v] = filas[i + k];
-        const x = M + k * col;
-        pdf.texto(x, y, n, { tam: 9.5, color: GRIS });
-        pdf.texto(x + col - 12, y, v, { tam: 10, negrita: true, alinear: "derecha" });
-      }
-      y += 15;
-    }
-  };
+$("#previa-cerrar").addEventListener("click", () => $("#previa").classList.add("oculto"));
+$("#previa-descargar").addEventListener("click", () => {
+  if (!INF.blob) return;
+  const url = URL.createObjectURL(INF.blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = INF.nombre;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+  aviso("PDF guardado en Archivos → Descargas", "ok");
+});
 
-  cabecera();
-  seccion("Moto y centralita");
+const COL_INF = { rojo: "#C0392B", naranja: "#B9770E", verde: "#1E8449", gris: "#5A6573", azul: "#21409A" };
+
+// Contenido del informe como lista de bloques; sirve para la vista previa y para el PDF
+function bloquesInforme({ av, ecu, hist, mant, rec, pids, vivo }) {
+  const B = [];
+  const sec = (txt) => B.push({ t: "seccion", txt });
+  const par = (k, v, color) => B.push({ t: "par", k, v, color });
+  const sub = (txt) => B.push({ t: "sub", txt });
+  const dtc = (cod, extra, color) => B.push({ t: "dtc", cod, desc: descripcionDtc(cod), extra, color });
+  const tabla = (filas) => B.push({ t: "tabla", filas });
+  const nada = (txt) => B.push({ t: "parrafo", txt, color: "gris" });
+
+  sec("Moto y centralita");
   par("VIN", ecu.vin || "No disponible");
   par("Versión de software", ecu.calid || "No disponible");
   par("Protocolo", ecu.protocolo || "—");
@@ -891,51 +871,127 @@ function generarInforme({ av, ecu, hist, mant, rec, pids, vivo }) {
   par("Valores disponibles", `${ecu.pidsConocidos ?? 0} (declarados ${ecu.pidsAdmitidos ?? 0})`);
   par("Cuentakilómetros", `${num(mant.km)} km${mant.kmCentralita ? " (centralita)" : " (estimado)"}`);
   par("Horas de motor", `${num(mant.horas, 1)} h`);
-  if (vivo && vivo.s) par("Atención", "Datos generados por el MODO SIMULADOR, no por la moto.", ROJO);
+  if (vivo && vivo.s) par("Atención", "Datos generados por el MODO SIMULADOR, no por la moto.", "rojo");
 
-  seccion("Testigo del motor y averías");
-  par("Testigo del motor", !av.milConocido ? "Desconocido" : av.mil ? "ENCENDIDO" : "Apagado", av.mil ? NARANJA : "#1E8449");
-  y += 4;
-  pdf.texto(M, y, "Averías guardadas", { tam: 11, negrita: true }); y += 16;
-  if (av.guardadas.length) av.guardadas.forEach((c) => dtc(c, av.foto && av.foto.valida && av.foto.dtc === c ? "Con foto del fallo" : "", ROJO));
-  else parrafo("Ninguna", { color: GRIS });
-  y += 4;
-  pdf.texto(M, y, "Averías pendientes", { tam: 11, negrita: true }); y += 16;
-  if (av.pendientes.length) av.pendientes.forEach((c) => dtc(c, "", NARANJA));
-  else parrafo("Ninguna", { color: GRIS });
+  sec("Testigo del motor y averías");
+  par("Testigo del motor", !av.milConocido ? "Desconocido" : av.mil ? "ENCENDIDO" : "Apagado", av.mil ? "naranja" : "verde");
+  sub("Averías guardadas");
+  if (av.guardadas.length) av.guardadas.forEach((c) => dtc(c, av.foto && av.foto.valida && av.foto.dtc === c ? "Con foto del fallo" : "", "rojo"));
+  else nada("Ninguna");
+  sub("Averías pendientes");
+  if (av.pendientes.length) av.pendientes.forEach((c) => dtc(c, "", "naranja"));
+  else nada("Ninguna");
 
   if (av.foto && av.foto.valida) {
-    seccion(`Foto del fallo (${av.foto.dtc})`);
+    sec(`Foto del fallo (${av.foto.dtc})`);
     tabla((av.foto.valores || []).map((p) => [p.nombre, `${num(p.v, p.dec)} ${p.unidad}`]));
   }
-
   if (vivo && vivo.c === 2 && pids.length) {
-    seccion("Valores en el momento del informe");
+    sec("Valores en el momento del informe");
     tabla(pids.filter((p) => vivo.v[p.id] !== undefined).map((p) => [p.nombre, `${num(vivo.v[p.id], p.dec)} ${p.unidad}`]));
   }
 
-  seccion("Mantenimiento");
+  sec("Mantenimiento");
   for (const it of mant.items) {
     const e = estadoItem(it, mant.km);
     par(it.nombre, `${e.falta >= 0 ? "Faltan" : "Pasado por"} ${num(Math.abs(e.falta))} km · cada ${num(it.int)} km · último a ${num(it.km)} km`,
-      e.nivel === "peligro" ? ROJO : e.nivel === "aviso" ? NARANJA : null);
+      e.nivel === "peligro" ? "rojo" : e.nivel === "aviso" ? "naranja" : null);
   }
 
-  seccion("Récords");
+  sec("Récords");
   tabla([
     ["Velocidad máxima", rec.vmax ? `${num(rec.vmax)} km/h` : "—"],
     ["Revoluciones máximas", rec.rpmMax ? `${num(rec.rpmMax)} rpm` : "—"],
     ["0 a 50 km/h", rec.t050 ? `${num(rec.t050, 2)} s` : "—"],
   ]);
 
-  seccion("Historial de averías");
+  sec("Historial de averías");
   const h = (hist.h || []).slice().sort((a, b) => (b.d || 0) - (a.d || 0)).slice(0, 40);
-  if (!h.length) parrafo("Sin registros.", { color: GRIS });
-  for (const e of h) {
-    dtc(e.c, `Detectada ${fecha(e.d)}${e.e === "b" ? ` · borrada ${fecha(e.h)} (${e.m || ""})` : " · ACTIVA"}`, e.e === "a" ? ROJO : GRIS);
-  }
+  if (!h.length) nada("Sin registros.");
+  for (const e of h) dtc(e.c, `Detectada ${fecha(e.d)}${e.e === "b" ? ` · borrada ${fecha(e.h)} (${e.m || ""})` : " · ACTIVA"}`, e.e === "a" ? "rojo" : "gris");
+  return B;
+}
 
-  // Pie con número de página
+const TITULO_INF = "Informe de diagnosis · Yamaha NMAX 125";
+const subtituloInf = (t) => "GPD125-A (BALD) · generado el " + fecha(t);
+
+function htmlInforme(B, t) {
+  const c = (k) => (k ? ` style="color:${COL_INF[k]}"` : "");
+  let h = `<div class="inf-cab"><b>${esc(TITULO_INF)}</b><span>${esc(subtituloInf(t))}</span></div>`;
+  for (const b of B) {
+    if (b.t === "seccion") h += `<h4>${esc(b.txt)}</h4>`;
+    else if (b.t === "sub") h += `<h5>${esc(b.txt)}</h5>`;
+    else if (b.t === "par") h += `<div class="inf-par"><span>${esc(b.k)}</span><b${c(b.color)}>${esc(b.v)}</b></div>`;
+    else if (b.t === "parrafo") h += `<p${c(b.color)}>${esc(b.txt)}</p>`;
+    else if (b.t === "dtc") h += `<div class="inf-dtc"><b${c(b.color)}>${esc(b.cod)}</b><span>${esc(b.desc)}${b.extra ? `<small>${esc(b.extra)}</small>` : ""}</span></div>`;
+    else if (b.t === "tabla") h += `<div class="inf-tabla">${b.filas.map(([n, v]) => `<div><span>${esc(n)}</span><b>${esc(v)}</b></div>`).join("")}</div>`;
+  }
+  return h;
+}
+
+function pdfInforme(B, t) {
+  const pdf = new Pdf();
+  const M = 46, ANCHO = pdf.W - 2 * M;
+  let y = 0;
+  const col = (k) => (k ? COL_INF[k] : "#111111");
+  const GRIS = COL_INF.gris, AZUL = COL_INF.azul;
+  const cabecera = () => {
+    pdf.rect(0, 0, pdf.W, 64, AZUL);
+    pdf.texto(M, 30, TITULO_INF, { tam: 17, negrita: true, color: "#FFFFFF" });
+    pdf.texto(M, 50, subtituloInf(t), { tam: 10, color: "#DDE3F5" });
+    y = 92;
+  };
+  const espacio = (h) => { if (y + h > pdf.H - 50) { pdf.nuevaPagina(); cabecera(); } };
+
+  cabecera();
+  for (const b of B) {
+    if (b.t === "seccion") {
+      espacio(40);
+      y += 8;
+      pdf.texto(M, y, b.txt, { tam: 13, negrita: true, color: AZUL });
+      y += 6;
+      pdf.linea(M, y, M + ANCHO, y, AZUL, 1);
+      y += 16;
+    } else if (b.t === "sub") {
+      espacio(30);
+      y += 4;
+      pdf.texto(M, y, b.txt, { tam: 11, negrita: true });
+      y += 16;
+    } else if (b.t === "par") {
+      const lineas = pdf.partir(b.v, ANCHO - 170, 10, true);
+      espacio(13 * lineas.length + 3);
+      pdf.texto(M, y, b.k, { tam: 10, color: GRIS });
+      lineas.forEach((l, i) => pdf.texto(M + 170, y + i * 13, l, { tam: 10, negrita: true, color: col(b.color) }));
+      y += 13 * lineas.length + 3;
+    } else if (b.t === "parrafo") {
+      for (const l of pdf.partir(b.txt, ANCHO, 10, false)) {
+        espacio(14);
+        pdf.texto(M, y, l, { tam: 10, color: col(b.color) });
+        y += 13;
+      }
+    } else if (b.t === "dtc") {
+      const lineas = pdf.partir(b.desc, ANCHO - 70, 10, false);
+      const extra = b.extra ? pdf.partir(b.extra, ANCHO - 70, 9, false) : [];
+      espacio(13 * lineas.length + 12 * extra.length + 8);
+      pdf.texto(M, y, b.cod, { tam: 12, negrita: true, color: col(b.color) });
+      lineas.forEach((l, i) => pdf.texto(M + 70, y + i * 13, l, { tam: 10 }));
+      y += 13 * lineas.length;
+      extra.forEach((l) => { pdf.texto(M + 70, y, l, { tam: 9, color: GRIS }); y += 12; });
+      y += 6;
+    } else if (b.t === "tabla") {
+      const ancho = ANCHO / 2;
+      for (let i = 0; i < b.filas.length; i += 2) {
+        espacio(16);
+        for (let k = 0; k < 2 && i + k < b.filas.length; k++) {
+          const [n, v] = b.filas[i + k];
+          const x = M + k * ancho;
+          pdf.texto(x, y, n, { tam: 9.5, color: GRIS });
+          pdf.texto(x + ancho - 12, y, v, { tam: 10, negrita: true, alinear: "derecha" });
+        }
+        y += 15;
+      }
+    }
+  }
   const n = pdf.paginas.length;
   pdf.paginas.forEach((ops, i) => {
     pdf.ops = ops;

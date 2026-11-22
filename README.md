@@ -23,8 +23,10 @@ src/
   mantenimiento.cpp   Kilómetros, horas de motor, aceite/correa/filtro
   grabacion.cpp       Trayectos en CSV
   web.*               WiFi, REST, WebSocket y OTA
+  actweb.*            Actualización de la web por WiFi (web.tar) sin borrar datos
   main.cpp            Arranque, tarea de comunicación y reposo profundo
 data/www/             Web del iPhone (se sube a LittleFS)
+tools/empaquetar_web.py  Genera web.tar en cada compilación
   index.html app.css app.js dtc.js pdf.js manifest.webmanifest
   fonts/              Barlow y Barlow Semi Condensed (licencia OFL)
   icons/              Iconos de la app
@@ -77,7 +79,7 @@ de ejemplo son P0115, P0122 y P0130 (pendiente); al borrarlas vuelven a los 3 mi
 4. A partir de ahí se abre a pantalla completa desde el icono. Todo funciona sin internet.
 
 Notas de iOS:
-- Los PDF y los CSV se descargan en Archivos → Descargas.
+- El informe se ve primero en una vista previa; con «Descargar PDF» se guarda en Archivos → Descargas. Los CSV de los trayectos también van ahí.
 - Al volver a la app desde segundo plano, se reconecta sola.
 
 ## Uso en la moto
@@ -103,13 +105,23 @@ simulador** y **no hay ningún iPhone conectado al WiFi**, la ESP32 entra en rep
 y despierta cada 2 minutos para ver si la centralita vuelve (sin encender el WiFi). Para
 despertarla al momento, desenchúfala y vuelve a enchufarla. Los tiempos están en `src/config.h`.
 
-## Actualizar el programa por WiFi (OTA)
+## Actualizar por WiFi (OTA)
 
-1. Compila con `pio run`. El archivo queda en `.pio/build/esp32dev/firmware.bin`.
-2. Pásalo al iPhone (AirDrop o iCloud Drive → Archivos).
-3. En la web: **Más → Actualizar programa** → elige el archivo → Actualizar.
+Al compilar con `pio run` se generan dos archivos en `.pio/build/esp32dev/`:
 
-Solo actualiza el programa, no la web ni los datos guardados.
+- `firmware.bin`: el programa que habla con la moto.
+- `web.tar`: las pantallas del iPhone (todo `data/www`).
+
+Para instalarlos:
+
+1. Pasa el archivo al iPhone (AirDrop o iCloud Drive → Archivos).
+2. En la web: **Más → Actualizar por WiFi** → elige el archivo → Actualizar. La web reconoce cuál de los dos es.
+
+En los dos casos **se conservan** el historial, los trayectos, los récords, el mantenimiento
+y los ajustes. La web nueva se descomprime aparte y solo sustituye a la anterior si ha llegado
+completa; si algo falla, se queda la que había.
+
+`pio run -t uploadfs` (por USB) sigue haciendo falta la primera vez, pero borra los datos.
 
 ## Datos guardados (LittleFS)
 
